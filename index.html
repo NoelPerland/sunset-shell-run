@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sunset Shell Run</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app">
+      <div id="game-shell">
+        <div id="hud">
+          <div>
+            <strong>Sunset Shell Run</strong>
+            <span id="status">Reach the flag</span>
+          </div>
+          <div id="progress-wrap" aria-label="Level progress">
+            <span id="level-name">World map</span>
+            <div id="progress-track"><span id="progress-fill"></span></div>
+          </div>
+          <canvas id="minimap" width="190" height="34" aria-label="Minimap"></canvas>
+          <div id="stats">
+            <span id="fruit">Fruit 0/18</span>
+            <span id="lives">Lives 3</span>
+            <span id="power">Blaster</span>
+            <button id="mute" type="button" aria-label="Toggle sound">Sound</button>
+          </div>
+        </div>
+        <div id="game"></div>
+        <div id="level-complete" hidden>
+          <img id="overlay-art" alt="" />
+          <strong>Level completed</strong>
+          <span>Press R to replay</span>
+        </div>
+        <div id="help">
+          <span><b>WASD</b><b>&larr;&rarr;</b><i>walk</i></span>
+          <span><b>&uarr;&darr;</b><i>look</i></span>
+          <span><b>Space</b><i>jump x2</i></span>
+          <span><b>F</b><b>J</b><i>shoot</i></span>
+          <span><b>Shift</b><i>run</i></span>
+          <span><b>Enter</b><i>next</i></span>
+          <span><b>M</b><i>map</i></span>
+          <span><b>P</b><i>pause</i></span>
+          <span><b>R</b><i>restart</i></span>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
