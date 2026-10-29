@@ -705,7 +705,7 @@ class GameScene extends Phaser.Scene {
   createPlayer() {
     this.player = this.add.rectangle(this.spawnPoint.x, this.spawnPoint.y, PLAYER.bodyWidth, PLAYER.bodyHeight, 0xffffff, 0);
     this.playerArt = this.add.sprite(this.spawnPoint.x, this.spawnPoint.y - 3, 'player-idle');
-    this.playerArt.setDisplaySize(50, 82);
+    this.playerArt.setDisplaySize(72, 114);
     this.playerArt.setOrigin(0.5, 1);
     this.playerArt.setAlpha(1);
     this.physics.add.existing(this.player);
@@ -978,7 +978,7 @@ class GameScene extends Phaser.Scene {
   }
 
   syncPlayerArt() {
-    this.playerArt.setPosition(this.player.x, this.player.y + PLAYER.bodyHeight / 2 + 3);
+    this.playerArt.setPosition(this.player.x, this.player.y + PLAYER.bodyHeight / 2 + 4.4);
   }
 
   updateEnemies() {
