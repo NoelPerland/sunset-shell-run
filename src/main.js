@@ -1,6 +1,34 @@
 import Phaser from 'phaser';
 import './styles.css';
 
+function prepareSpriteFrames(scene) {
+  const frames = {
+    'player-idle':[45,255,125,175], 'player-jump':[1040,25,155,190], 'player-fall':[1240,45,165,195],
+    'fruit-star-clean':[1020,270,155,150], 'fruit-star-padded':[1020,270,155,150],
+    'shell-spike':[1230,270,190,150], 'spring':[700,465,180,180],
+  };
+  for(let i=0;i<6;i++) frames['player-run-'+i]=[40+i*160,35,140,195];
+  for(const [key,crop] of Object.entries(frames)) {
+    const player=key.startsWith('player'),w=player?144:192,h=player?208:192;
+    if(scene.textures.exists(key)) scene.textures.remove(key);
+    const texture=scene.textures.createCanvas(key,w,h),context=texture.context;
+    const sample=document.createElement('canvas');sample.width=crop[2];sample.height=crop[3];
+    const ctx=sample.getContext('2d');ctx.drawImage(scene.textures.get('source-summer').getSourceImage(),...crop,0,0,crop[2],crop[3]);
+    const pixels=ctx.getImageData(0,0,crop[2],crop[3]).data;let left=crop[2],top=crop[3],right=0,bottom=0;
+    for(let y=0;y<crop[3];y++)for(let x=0;x<crop[2];x++)if(pixels[(y*crop[2]+x)*4+3]>8){left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);}
+    const sw=right-left+1,sh=bottom-top+1,scale=player ? 0.92 : Math.min((w-16)/sw,(h-16)/sh);
+    context.imageSmoothingEnabled=false;
+    context.drawImage(sample,left,top,sw,sh,(w-sw*scale)/2,h-8-sh*scale,sw*scale,sh*scale);
+    texture.refresh();
+  }
+  const crop=[880,65,140,125];
+  if(scene.textures.exists('power-heart')) scene.textures.remove('power-heart');
+  const texture=scene.textures.createCanvas('power-heart',160,160);
+  texture.context.drawImage(scene.textures.get('source-upgrades').getSourceImage(),...crop,10,15,140,125);texture.refresh();
+  scene.registry.set('padded-frames',true);
+}
+
+
 const WORLD = {
   width: 5200,
   height: 720,
@@ -325,14 +353,17 @@ class WorldMapScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('world-map', '/assets/sprites/world-map.png');
-    this.load.image('player-idle', '/assets/sprites/player-idle.png');
+    this.load.image('source-summer', `${import.meta.env.BASE_URL}assets/sprites/summer-sprite-atlas.png`);
+    this.load.image('source-upgrades', `${import.meta.env.BASE_URL}assets/sprites/atlas-upgrades.png`);
+    this.load.image('world-map', `${import.meta.env.BASE_URL}assets/sprites/world-map.png`);
+    this.load.image('player-idle', `${import.meta.env.BASE_URL}assets/sprites/player-idle.png`);
     ['player-run-0', 'player-run-1', 'player-run-2', 'player-run-3', 'player-run-4', 'player-run-5'].forEach((key) => {
-      this.load.image(key, `/assets/sprites/${key}.png`);
+      this.load.image(key, `${import.meta.env.BASE_URL}assets/sprites/${key}.png`);
     });
   }
 
   create() {
+    prepareSpriteFrames(this);
     this.hideLevelComplete();
     this.createAnimations();
     this.add.image(480, 270, 'world-map').setDisplaySize(960, 540);
@@ -506,6 +537,8 @@ class GameScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.image('source-summer', `${import.meta.env.BASE_URL}assets/sprites/summer-sprite-atlas.png`);
+    this.load.image('source-upgrades', `${import.meta.env.BASE_URL}assets/sprites/atlas-upgrades.png`);
     [
       'player-idle', 'player-run-0', 'player-run-1', 'player-run-2', 'player-run-3',
       'player-run-4', 'player-run-5', 'player-jump', 'player-fall',
@@ -528,11 +561,12 @@ class GameScene extends Phaser.Scene {
       'ui-power-heart', 'ui-power-shield', 'ui-power-speed', 'ui-power-triple',
       'world-map',
     ].forEach((key) => {
-      this.load.image(key, `/assets/sprites/${key}.png`);
+      this.load.image(key, `${import.meta.env.BASE_URL}assets/sprites/${key}.png`);
     });
   }
 
   create() {
+    prepareSpriteFrames(this);
     this.resetState();
     this.hideLevelComplete();
     this.createAnimations();
@@ -672,6 +706,7 @@ class GameScene extends Phaser.Scene {
     this.player = this.add.rectangle(this.spawnPoint.x, this.spawnPoint.y, PLAYER.bodyWidth, PLAYER.bodyHeight, 0xffffff, 0);
     this.playerArt = this.add.sprite(this.spawnPoint.x, this.spawnPoint.y - 3, 'player-idle');
     this.playerArt.setDisplaySize(50, 82);
+    this.playerArt.setOrigin(0.5, 1);
     this.playerArt.setAlpha(1);
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(false);
@@ -943,7 +978,7 @@ class GameScene extends Phaser.Scene {
   }
 
   syncPlayerArt() {
-    this.playerArt.setPosition(this.player.x, this.player.y - 3);
+    this.playerArt.setPosition(this.player.x, this.player.y + PLAYER.bodyHeight / 2 + 3);
   }
 
   updateEnemies() {
