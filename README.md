@@ -70,3 +70,7 @@ build: `npm run verify:layout -- https://noelperland.github.io/sunset-shell-run/
 The Chrome check covers desktop, portrait and rotation, undistorted canvas fit,
 keyboard movement, touch movement/jump/shoot, pause/resume, and map navigation.
 Set `CHROME_PATH` when Chrome is installed elsewhere.
+
+Progress regression: npm test checks corrupt saves and blocked/full storage. Completed levels remain available within current tab when persistence fails; reload cannot recover unsaved progress.
+
+Run npm run verify:mechanics for controlled browser checks in all four themes: checkpoint respawn, four powerups, spring launch and boss-gated finish. This invokes real scene methods with controlled state; it does not prove natural level completion or difficulty. CHROME_PATH selects installed Chrome.

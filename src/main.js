@@ -305,6 +305,7 @@ function buildLevel(baseLevel, index) {
 }
 
 const COMPLETED_KEY = 'sunset-shell-run-completed';
+const sessionCompleted = new Set();
 const POWERUP_LABELS = {
   heart: 'HEART POWERUP',
   shield: 'SHIELD POWERUP',
@@ -314,16 +315,22 @@ const POWERUP_LABELS = {
 
 function getCompletedLevels() {
   try {
-    return new Set(JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]'));
+    const saved = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+    return new Set([...sessionCompleted, ...(Array.isArray(saved) ? saved.filter(index => Number.isInteger(index) && index >= 0 && index < LEVELS.length) : [])]);
   } catch {
-    return new Set();
+    return new Set(sessionCompleted);
   }
 }
 
 function saveCompletedLevel(levelIndex) {
+  sessionCompleted.add(levelIndex);
   const completed = getCompletedLevels();
   completed.add(levelIndex);
-  localStorage.setItem(COMPLETED_KEY, JSON.stringify([...completed]));
+  try {
+    localStorage.setItem(COMPLETED_KEY, JSON.stringify([...completed]));
+  } catch {
+    // Storage may be disabled or full; finishing a level must still work.
+  }
 }
 
 class SoundBank {

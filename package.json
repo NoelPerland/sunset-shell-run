@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "verify:mechanics": "node scripts/check-mechanics.mjs",
     "verify:layout": "node scripts/verify-layout.cjs",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "start": "npm run build && node server.js"
+    "start": "npm run build && node server.js",
+    "test": "node scripts/check-progress.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0",
