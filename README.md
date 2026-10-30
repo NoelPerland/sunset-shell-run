@@ -62,3 +62,11 @@ Open the local URL printed by Vite.
 - Juice UX Artist: particles, camera shake/flash, sound cues, readable HUD.
 - Code Teacher: named constants, compact file map, readable methods.
 - Playtest QA: build and runtime checks.
+
+## Browser layout and input checks
+
+Run the dev server, then `npm run verify:layout`. An optional URL checks a deployed
+build: `npm run verify:layout -- https://noelperland.github.io/sunset-shell-run/`.
+The Chrome check covers desktop, portrait and rotation, undistorted canvas fit,
+keyboard movement, touch movement/jump/shoot, pause/resume, and map navigation.
+Set `CHROME_PATH` when Chrome is installed elsewhere.

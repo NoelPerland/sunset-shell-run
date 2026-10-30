@@ -1,6 +1,31 @@
 import Phaser from 'phaser';
 import './styles.css';
 
+const touchHeld = new Set();
+const touchPressed = new Set();
+const justPressed = (action) => touchPressed.delete(action);
+const keyActions = { Enter: 'start', KeyR: 'restart', KeyM: 'map', KeyP: 'pause', Escape: 'pause', Space: 'jump', KeyF: 'shoot', KeyJ: 'shoot' };
+// Queue brief key taps so they survive until the next render frame, just like touch taps.
+window.addEventListener('keydown', event => {
+  const action = keyActions[event.code];
+  if (action && !event.repeat) touchPressed.add(action);
+});
+const clearTouch = () => { touchHeld.clear(); touchPressed.clear(); };
+for (const button of document.querySelectorAll('#touch-controls button')) {
+  button.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    button.setPointerCapture(event.pointerId);
+    if (button.dataset.hold) touchHeld.add(button.dataset.hold);
+    else touchPressed.add(button.dataset.action);
+  });
+  const release = () => { if (button.dataset.hold) touchHeld.delete(button.dataset.hold); };
+  button.addEventListener('pointerup', release);
+  button.addEventListener('pointercancel', release);
+  button.addEventListener('lostpointercapture', release);
+}
+window.addEventListener('blur', clearTouch);
+document.addEventListener('visibilitychange', () => { if (document.hidden) clearTouch(); });
+
 function prepareSpriteFrames(scene) {
   const frames = {
     'player-idle':[45,255,125,175], 'player-jump':[1040,25,155,190], 'player-fall':[1240,45,165,195],
@@ -382,14 +407,8 @@ class WorldMapScene extends Phaser.Scene {
       downArrow: Phaser.Input.Keyboard.KeyCodes.DOWN,
       start: Phaser.Input.Keyboard.KeyCodes.ENTER,
     });
-    const startFromWindow = (event) => {
-      if (event.code === 'Enter' && !event.repeat) {
-        this.scene.start('GameScene', { levelIndex: this.selectedNode.levelIndex });
-      }
-    };
-    window.addEventListener('keydown', startFromWindow);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      window.removeEventListener('keydown', startFromWindow);
+      clearTouch();
     });
     this.updateHud(`Choose world: ${this.selectedNode.label}`);
   }
@@ -438,8 +457,8 @@ class WorldMapScene extends Phaser.Scene {
     const distance = (speed * delta) / 1000;
     let dx = 0;
     let dy = 0;
-    if (this.keys.left.isDown || this.keys.leftArrow.isDown) dx -= distance;
-    if (this.keys.right.isDown || this.keys.rightArrow.isDown) dx += distance;
+    if (this.keys.left.isDown || this.keys.leftArrow.isDown || touchHeld.has('left')) dx -= distance;
+    if (this.keys.right.isDown || this.keys.rightArrow.isDown || touchHeld.has('right')) dx += distance;
     if (this.keys.up.isDown || this.keys.upArrow.isDown) dy -= distance;
     if (this.keys.down.isDown || this.keys.downArrow.isDown) dy += distance;
 
@@ -462,7 +481,7 @@ class WorldMapScene extends Phaser.Scene {
     }
     this.marker.setPosition(this.selectedNode.x, this.selectedNode.y);
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.start)) {
+    if (justPressed('start')) {
       this.scene.start('GameScene', { levelIndex: this.selectedNode.levelIndex });
     }
   }
@@ -847,27 +866,8 @@ class GameScene extends Phaser.Scene {
       pause: Phaser.Input.Keyboard.KeyCodes.P,
       escape: Phaser.Input.Keyboard.KeyCodes.ESC,
     });
-    this.input.keyboard.on('keydown-R', () => this.scene.restart());
-    const restartFromWindow = (event) => {
-      if (event.code === 'KeyR') {
-        this.scene.restart();
-      }
-      if (event.code === 'Enter' && this.state.won) {
-        this.nextLevel();
-      }
-      if (event.code === 'KeyM') {
-        this.scene.start('WorldMapScene');
-      }
-      if ((event.code === 'KeyP' || event.code === 'Escape') && !event.repeat) {
-        this.togglePause();
-      }
-      if ((event.code === 'KeyF' || event.code === 'KeyJ') && !event.repeat && !this.state.paused && !this.state.won) {
-        this.shoot(this.time.now);
-      }
-    };
-    window.addEventListener('keydown', restartFromWindow);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      window.removeEventListener('keydown', restartFromWindow);
+      clearTouch();
     });
   }
 
@@ -877,27 +877,31 @@ class GameScene extends Phaser.Scene {
   }
 
   update(time) {
-    if (Phaser.Input.Keyboard.JustDown(this.keys.restart)) {
+    if (justPressed('restart')) {
       this.scene.restart();
       return;
     }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.map)) {
+    if (justPressed('map')) {
       this.scene.start('WorldMapScene');
       return;
     }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.pause) || Phaser.Input.Keyboard.JustDown(this.keys.escape)) {
+    if (justPressed('pause')) {
       this.togglePause();
       return;
     }
-    if (this.state.won && Phaser.Input.Keyboard.JustDown(this.keys.next)) {
-      this.nextLevel();
+    const startRequested = justPressed('start');
+    if ((this.state.won || this.state.dead) && startRequested) {
+      if (this.state.dead) this.scene.restart();
+      else this.nextLevel();
       return;
     }
     if (this.state.paused) {
+      clearTouch();
       this.player.body.setVelocityX(0);
       return;
     }
     if (this.state.dead || this.state.won) {
+      clearTouch();
       this.player.body.setVelocityX(0);
       this.syncPlayerArt();
       return;
@@ -922,20 +926,20 @@ class GameScene extends Phaser.Scene {
       this.coyoteUntil = time + PLAYER.coyoteTimeMs;
       this.jumpsUsed = 0;
     }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.jump)) {
+    if (justPressed('jump')) {
       this.jumpBufferedUntil = time + PLAYER.jumpBufferMs;
     }
-    if (Phaser.Input.Keyboard.JustDown(this.keys.shoot) || Phaser.Input.Keyboard.JustDown(this.keys.shootAlt)) {
+    if (justPressed('shoot')) {
       this.shoot(time);
     }
 
     const hasSpeed = this.speedUntil > time;
     const speed = this.keys.run.isDown || hasSpeed ? PLAYER.runSpeed + (hasSpeed ? 70 : 0) : PLAYER.walkSpeed;
     let targetVelocity = 0;
-    if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
+    if (this.keys.left.isDown || this.keys.leftArrow.isDown || touchHeld.has('left')) {
       targetVelocity = -speed;
       this.playerArt.setFlipX(true);
-    } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
+    } else if (this.keys.right.isDown || this.keys.rightArrow.isDown || touchHeld.has('right')) {
       targetVelocity = speed;
       this.playerArt.setFlipX(false);
     }
@@ -1337,7 +1341,7 @@ class GameScene extends Phaser.Scene {
   showCenterMessage(title, subtitle) {
     const overlay = document.querySelector('#level-complete');
     overlay.className = '';
-    overlay.querySelector('#overlay-art').src = '/assets/sprites/ui-power-ring.png';
+    overlay.querySelector('#overlay-art').src = `${import.meta.env.BASE_URL}assets/sprites/ui-power-ring.png`;
     overlay.querySelector('strong').textContent = title;
     overlay.querySelector('span').textContent = subtitle;
     overlay.hidden = false;
@@ -1352,7 +1356,7 @@ class GameScene extends Phaser.Scene {
       'TRIPLE SHOT POWERUP': 'ui-power-triple',
     }[title] ?? 'ui-power-ring';
     overlay.className = 'power-toast';
-    overlay.querySelector('#overlay-art').src = `/assets/sprites/${art}.png`;
+    overlay.querySelector('#overlay-art').src = `${import.meta.env.BASE_URL}assets/sprites/${art}.png`;
     overlay.querySelector('strong').textContent = title;
     overlay.querySelector('span').textContent = 'Power active';
     overlay.hidden = false;
@@ -1368,7 +1372,7 @@ class GameScene extends Phaser.Scene {
     const overlay = document.querySelector('#level-complete');
     const nextLevel = LEVELS[this.levelIndex + 1];
     overlay.className = '';
-    overlay.querySelector('#overlay-art').src = '/assets/sprites/ui-level-banner.png';
+    overlay.querySelector('#overlay-art').src = `${import.meta.env.BASE_URL}assets/sprites/ui-level-banner.png`;
     overlay.querySelector('strong').textContent = 'Level completed';
     overlay.querySelector('span').textContent = nextLevel
       ? `Next: ${THEMES[nextLevel.theme].label}. Enter, or M for map`
@@ -1411,6 +1415,24 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+function fitGame() {
+  const shell = document.querySelector('#game-shell');
+  const parent = document.querySelector('#game');
+  const maxWidth = Math.min(1360, document.documentElement.clientWidth - 16);
+  shell.style.width = `${maxWidth}px`;
+  // HUD wrapping changes height as the game narrows; settle both constraints together.
+  for (let pass = 0; pass < 4; pass += 1) {
+    const chrome = ['hud', 'help', 'touch-controls'].reduce((sum, id) => sum + document.getElementById(id).getBoundingClientRect().height, 0);
+    const width = Math.floor(Math.min(maxWidth, Math.max(160, (window.innerHeight - 16 - chrome) * 16 / 9)));
+    shell.style.width = `${width}px`;
+    parent.style.height = `${width * 9 / 16}px`;
+  }
+  game.scale.setParentSize(parent.clientWidth, parent.clientHeight);
+}
+window.addEventListener('resize', () => { clearTouch(); fitGame(); });
+requestAnimationFrame(fitGame);
+document.fonts.ready.then(fitGame);
 window.__sunsetShellRunGame = game;
 
 document.querySelector('#mute').addEventListener('click', (event) => {
